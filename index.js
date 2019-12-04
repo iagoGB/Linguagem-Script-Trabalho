@@ -4,53 +4,57 @@ const handlebars = require('express-handlebars');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 
-server.engine('handlebars', handlebars({defaultLayout: 'main'}));
+server.engine('handlebars', handlebars({ defaultLayout: 'main' }));
 server.set('view engine', 'handlebars');
-server.use(bodyParser.urlencoded({extended: false}));
+server.use(bodyParser.urlencoded({ extended: false }));
 server.use(bodyParser.json());
 
 const porta = 3000;
 
-server.get("/", (req,res) =>{
+server.get("/", (req, res) => {
     res.render('input');
 });
 
-server.post('/processarCodigo', (req,res) => {
-    //Pega a função digitada
-    conteudo = req.body.conteudo;
-    var regExp = /\(([^)]+)\)/;
-    //Checa se a função tem parâmetros
-    parametro = regExp.exec(req.body.conteudo);
-    //console.log( array );
-    if ( parametro == null ){
-        
-        fs.readFile("./views/result.handlebars",(erro, arquivo) =>{ 
-            if (!erro){
-                
-                var regExp2 = /\${([^}]+)}/;
-                result = regExp2.exec(arquivo);
-                result.forEach(element => {
-                   console.log("Elemento"+ element); 
-                });
-                res.send(result);
-            } else {
+server.post('/processarCodigo', (req, res) => {
 
-                res.send("Erro ao executar o programa");
-                res.sendStatus(400);
+
+    fs.readFile("./views/result.handlebars", (erro, arquivo) => {
+
+        if (!erro) {
+
+            // /g para multiplos  matches 
+            var regExp = /\${([^}]+)}/g; // ${ QualquerCoisa }
+            var match;
+            var matchArray = [];
+
+            while ((match = regExp.exec(arquivo)) !== null) {
+
+                matchArray.push(match[1]);
+
             }
-        });
-    } else {
-        array = conteudo.split("{");
-        //Pega o nome da função para executa-la
-        chamarFuncao = array[0].replace('function','');
-        console.log("funcao: " + chamarFuncao);
-        result = eval(req.body.conteudo +" "+ chamarFuncao);
-        res.send("A função possui parametros");
-    }
-    
-   
 
-    
+
+            var regExp2 = /\(([^)]+)\)/; // ( QualquerCoisa ) 
+            var funcao = req.body.conteudo;
+            nomeParametro = regExp2.exec(req.body.conteudo);
+
+            var resultadoArquivo = arquivo.toString();
+
+            matchArray.forEach(valorVariavel => {
+
+                array = funcao.split("{");
+                resultadoFuncao = eval(funcao + " " + array[0].replace(nomeParametro[1], valorVariavel).replace('function', ''));
+                resultadoArquivo = resultadoArquivo.replace("${" + valorVariavel + "}", resultadoFuncao);
+
+            });
+
+            res.write(resultadoArquivo);
+
+        } else {
+
+            res.send("Erro ao executar o programa. Tente novamente");
+        }
+    });
 
 });
 
